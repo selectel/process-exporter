@@ -14,7 +14,7 @@ instrument with Prometheus.  We must instead resort to mining /proc.
 ## Installation
 
 Either grab a package for your OS from the [Releases][release] page, or
-install via [docker](https://hub.docker.com/r/selectel/process-exporter/).
+install via Docker from GitHub Container Registry.
 
 ## Running
 
@@ -27,7 +27,7 @@ Usage:
 or via docker:
 
 ```
-  docker run -d --rm -p 9256:9256 --privileged -v /proc:/host/proc -v `pwd`:/config selectel/process-exporter --procfs /host/proc -config.path /config/filename.yml
+  docker run -d --rm -p 9256:9256 --privileged -v /proc:/host/proc -v `pwd`:/config ghcr.io/selectel/process-exporter --procfs /host/proc -config.path /config/filename.yml
 
 ```
 
