@@ -4,9 +4,9 @@ import (
 	"log"
 	"time"
 
-	common "github.com/ncabatoff/process-exporter"
-	"github.com/ncabatoff/process-exporter/proc"
 	"github.com/prometheus/client_golang/prometheus"
+	common "github.com/selectel/process-exporter"
+	"github.com/selectel/process-exporter/proc"
 )
 
 var (
