@@ -300,9 +300,9 @@ func main() {
 		}()
 	}
 
-	http.Handle(*metricsPath, promhttp.Handler())
-
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	metricsMux := http.NewServeMux()
+	metricsMux.Handle(*metricsPath, promhttp.Handler())
+	metricsMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`<html>
 			<head><title>Named Process Exporter</title></head>
 			<body>
@@ -311,7 +311,8 @@ func main() {
 			</body>
 			</html>`))
 	})
-	server := &http.Server{Addr: *listenAddress}
+
+	server := &http.Server{Addr: *listenAddress, Handler: metricsMux}
 
 	go func() {
 		<-sigs
