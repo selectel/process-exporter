@@ -1,11 +1,11 @@
 # process-exporter
 Prometheus exporter that mines /proc to report on selected processes.
 
-[release]: https://github.com/ncabatoff/process-exporter/releases/latest
+[release]: https://github.com/selectel/process-exporter/releases/latest
 
-[![Release](https://img.shields.io/github/release/ncabatoff/process-exporter.svg?style=flat-square")][release]
+[![Release](https://img.shields.io/github/release/selectel/process-exporter.svg?style=flat-square")][release]
 [![Powered By: GoReleaser](https://img.shields.io/badge/powered%20by-goreleaser-green.svg?branch=master)](https://github.com/goreleaser)
-![Build](https://github.com/ncabatoff/process-exporter/actions/workflows/build.yml/badge.svg)
+![Build](https://github.com/selectel/process-exporter/actions/workflows/build.yml/badge.svg)
 
 Some apps are impractical to instrument directly, either because you
 don't control the code or they're written in a language that isn't easy to
@@ -14,7 +14,7 @@ instrument with Prometheus.  We must instead resort to mining /proc.
 ## Installation
 
 Either grab a package for your OS from the [Releases][release] page, or
-install via [docker](https://hub.docker.com/r/ncabatoff/process-exporter/).
+install via Docker from GitHub Container Registry.
 
 ## Running
 
@@ -27,7 +27,7 @@ Usage:
 or via docker:
 
 ```
-  docker run -d --rm -p 9256:9256 --privileged -v /proc:/host/proc -v `pwd`:/config ncabatoff/process-exporter --procfs /host/proc -config.path /config/filename.yml
+  docker run -d --rm -p 9256:9256 --privileged -v /proc:/host/proc -v `pwd`:/config ghcr.io/selectel/process-exporter --procfs /host/proc -config.path /config/filename.yml
 
 ```
 
@@ -421,3 +421,9 @@ process_open_fds 10
 ```
 
 For further information about TLS configuration, please visit: [exporter-toolkit](https://github.com/prometheus/exporter-toolkit/blob/master/docs/web-configuration.md)
+
+## Profiling with pprof
+
+HTTP server with pprof **disable** by default.
+For enable profiling use `--profiling.enabled` option.
+The address and port are specified using the options `--profiling.host` (default:`localhost`) and `--profiling.port` (default:`6060`)

@@ -2,28 +2,31 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
-	_ "net/http/pprof"
+	"net/http/pprof"
 	"os"
 	"os/signal"
 	"regexp"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/ncabatoff/fakescraper"
-	common "github.com/ncabatoff/process-exporter"
-	"github.com/ncabatoff/process-exporter/collector"
-	"github.com/ncabatoff/process-exporter/config"
 	"github.com/prometheus/client_golang/prometheus"
 	verCollector "github.com/prometheus/client_golang/prometheus/collectors/version"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/prometheus/common/promlog"
+	"github.com/prometheus/common/promslog"
 	promVersion "github.com/prometheus/common/version"
 	"github.com/prometheus/exporter-toolkit/web"
+	common "github.com/selectel/process-exporter"
+	"github.com/selectel/process-exporter/collector"
+	"github.com/selectel/process-exporter/config"
 )
 
 // Version is set at build time use ldflags.
@@ -183,11 +186,14 @@ func main() {
 		showVersion = flag.Bool("version", false,
 			"print version information and exit")
 		removeEmptyGroups = flag.Bool("remove-empty-groups", false, "forget process groups with no processes")
+		profilingEnabled  = flag.Bool("profiling.enabled", false, "enable profiling via web interface host:port/debug/pprof/")
+		profilingPort     = flag.Int("profiling.port", 6060, "port to listen profiling server")
+		profilingHost     = flag.String("profiling.host", "localhost", "host to listen profiling server")
 	)
 	flag.Parse()
 
-	promlogConfig := &promlog.Config{}
-	logger := promlog.New(promlogConfig)
+	promlogConfig := &promslog.Config{}
+	logger := promslog.New(promlogConfig)
 
 	if *showVersion {
 		fmt.Printf("%s\n", promVersion.Print("process-exporter"))
@@ -275,6 +281,25 @@ func main() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
+	pprofMux := http.NewServeMux()
+	pprofMux.HandleFunc("/debug/pprof/", pprof.Index)
+	pprofMux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	pprofMux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	pprofMux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	pprofMux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+
+	pprofListenAddr := net.JoinHostPort(*profilingHost, strconv.Itoa(*profilingPort))
+	pprofServer := &http.Server{Addr: pprofListenAddr, Handler: pprofMux}
+
+	if *profilingEnabled {
+		go func() {
+			logger.Info("Listening profile server on", "address", pprofListenAddr)
+			if err := pprofServer.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+				log.Fatalf("Failed to start the profiling server: %v", err)
+			}
+		}()
+	}
+
 	http.Handle(*metricsPath, promhttp.Handler())
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -297,6 +322,11 @@ func main() {
 
 		if err := server.Shutdown(ctx); err != nil {
 			log.Fatalf("Server Shutdown Failed: %v", err)
+		}
+		if *profilingEnabled {
+			if err := pprofServer.Shutdown(ctx); err != nil {
+				log.Fatalf("Profiling server shutdown failed: %v", err)
+			}
 		}
 	}()
 
